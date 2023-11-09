@@ -56,18 +56,20 @@ async function run() {
             const query = { _id: new ObjectId(id) };
             const options = { upsert: true };
             const updateJob = req.body;
-            const car = {
+            const job = {
                 $set: {
+                    user: updateJob.user,
                     title: updateJob.title,
-                    category: updateJob.category,
+                    type: updateJob.type,
                     salary: updateJob.salary,
+                    applicant: updateJob.applicant,
                     description: updateJob.description,
-                    image: updateJob.image,
+                    url: updateJob.url,
                     date: updateJob.date,
-                    applicants: updateJob.applicants
+                    deadline: updateJob.deadline,
                 }
             }
-            const result = await jobsCollection.updateOne(query, car, options)
+            const result = await jobsCollection.updateOne(query, job, options)
             res.send(result)
         })
 
@@ -80,28 +82,36 @@ async function run() {
         })
 
         
-        //cart items
-        const cartCollection = client.db("carsDB").collection("cart")
+        //All Jobs
+        const allJobsCollection = client.db("jobsDB").collection("allJobs")
 
         // add cart
-        app.post('/cart/add', async (req, res) => {
+        app.post('/allJobs/add', async (req, res) => {
             const selectedCar = req.body;
-            const result = await cartCollection.insertOne(selectedCar);
+            const result = await allJobsCollection.insertOne(selectedCar);
             res.send(result)
         })
 
         // read data 
-        app.get('/cart/add', async (req, res) => {
-            const cursor = cartCollection.find();
+        app.get('/allJobs/add', async (req, res) => {
+            const cursor = allJobsCollection.find();
             const result = await cursor.toArray()
             res.send(result);
+        })
+
+        // get data
+        app.get('/allJobs/add/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await allJobsCollection.findOne(query);
+            res.send(result)
         })
 
         // delete car from cart
         app.delete('/cart/:id', async (req, res) => {
             const id = req.params.id;
             const query = {_id: new ObjectId(id)};
-            const result = await cartCollection.deleteOne(query)
+            const result = await allJobsCollection.deleteOne(query)
             res.send(result);
         })
 
