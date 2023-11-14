@@ -1,40 +1,25 @@
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express');
 const cors = require('cors');
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 const app = express();
-const jwt = require('jsonwebtoken')
 
 const port = process.env.PORT || 5000;
 
-app.use(cors());
+
+app.use(cors({
+    origin: [
+        'http://localhost:5173'
+    ],
+    credentials: true,
+}));
+
 app.use(express.json());
+app.use(cookieParser());
 
 
-
-
-const getUserIdFromAuthentication = req => {
-    const authHeader = req.headers.authorization;
-  
-    if (!authHeader || !authHeader.startsWith('Bearer')) {
-      return null;
-    }
-  
-    const token = authHeader.split(" ")[1];
-    const decodedToken = jwt.verify(token, process.env.Access_Token_Key);
-  
-    return decodedToken && decodedToken.userId ? decodedToken.userId : null;
-  }
-  
-
-app.use((req, res, next) => {
-    req.userId = getUserIdFromAuthentication(req);
-    next();
-})
-
-  
 
 const uri = `mongodb+srv://${process.env.DB_User}:${process.env.DB_Pass}@cluster0.tloczwa.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -54,35 +39,28 @@ async function run() {
 
         const jobsCollection = client.db("jobsDB").collection("jobs");
 
+        // Auth Related api
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            console.log('user for token', user);
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_KEY, {
+                expiresIn: "1h"
+            });
+            res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+            res.header('Access-Control-Allow-Credentials', true);
 
-        // // post related api
-        // app.post ('/jwt', async(req, res) => {
-        //     const user = req.body;
-        //     const token = jwt.sign(user, process.env.Access_Token_Key, {expiresIn: "100h"});
-        //     res.send({token})
-        // })
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: "none",
+            })
+            res.send({ success: true });
+        });
 
-        // create data
-        app.post('/jobs', async (req, res) => {
-            const newJobs = req.body;
-            console.log(newJobs)
-            const result = await jobsCollection.insertOne(newJobs);
-            res.send(result)
-        })
-
-        // read data
-        app.get('/jobs', async (req, res) => {
-            const cursor = jobsCollection.find();
-            const result = await cursor.toArray();
-            res.send(result)
-        })
-
-        // get data
-        app.get('/jobs/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) };
-            const result = await jobsCollection.findOne(query);
-            res.send(result)
+        app.post("/logout", async (req, res) => {
+            const user = req.body;
+            console.log('loggedOut:', user);
+            res.clearCookie('token', { maxAge: 0 }).send({ success: true })
         })
 
         // //update data
@@ -123,7 +101,6 @@ async function run() {
         // add Job
         app.post('/allJobs/add', async (req, res) => {
             const selectedJob = req.body;
-            selectedJob.userId = req.userId;
             const result = await allJobsCollection.insertOne(selectedJob);
             res.send(result)
         })
@@ -144,33 +121,32 @@ async function run() {
         })
 
 
-        // get data specific user
-        app.get('/myJobs/:userId', async (req, res) => {
-            try {
-                const userId = req.params.userId;
-                console.log("Fetching user jobs for userId:", userId);
+        // Applied Jobs
+        const appliedJobsCollection = client.db("jobsDB").collection("appliedJobs")
 
-                const cursor = allJobsCollection.find({ user: userId });
-                const result = await cursor.toArray();
-
-                console.log("User jobs fetched successfully:", result);
-
-                res.json(result);
-            } catch (error) {
-                console.error("Error fetching user jobs:", error);
-                res.status(500).json({ error: "Internal Server Error" });
+        app.get('/appliedJobs', async (req, res) => {
+            let query = {};
+            if (req.query?.email) {
+                query = { email: req.query.email }
             }
-        });
-
-
-        // delete car from cart
-        app.delete('/cart/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) };
-            const result = await allJobsCollection.deleteOne(query)
+            const result = await appliedJobsCollection.find(query).toArray();
             res.send(result);
         })
+        // Store Applied Jobs
+        app.post('/appliedJobs/add', async (req, res) => {
+            const appliedJob = req.body;
+            console.log(appliedJob);
+            const result = await appliedJobsCollection.insertOne(appliedJob)
+            res.send(result)
+        })
 
+        // Read Applied Jobs
+        app.get('/appliedJobs/add', async (req, res) => {
+
+            const cursor = appliedJobsCollection.find();
+            const result = await cursor.toArray();
+            res.send(result);
+        })
 
 
         // Send a ping to confirm a successful connection
