@@ -11,7 +11,7 @@ const port = process.env.PORT || 5000;
 
 app.use(cors({
     origin: [
-        'http://localhost:5173'
+        'https://job-heaven.vercel.app/'
     ],
     credentials: true,
 }));
@@ -46,7 +46,7 @@ async function run() {
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_KEY, {
                 expiresIn: "1h"
             });
-            res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+            res.header('Access-Control-Allow-Origin', 'https://job-heaven.vercel.app/');
             res.header('Access-Control-Allow-Credentials', true);
 
             res.cookie('token', token, {
@@ -113,7 +113,6 @@ async function run() {
         app.put('/allJobs/user/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
-            const options = { upsert: true };
             const updateJob = req.body;
             const job = {
                 $set: {
@@ -126,8 +125,10 @@ async function run() {
                     pictureUrl: updateJob.pictureUrl,
                     postingDate: updateJob.postingDate,
                     applicationDeadline: updateJob.applicationDeadline,
-                }
+                },
+                $inc: { applicantsNumber: 1 } // Increment the applicantsNumber by 1
             }
+            const options = { upsert: true };
             const result = await allJobsCollection.updateOne(query, job, options)
             res.send(result)
         })
