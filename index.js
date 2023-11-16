@@ -63,36 +63,7 @@ async function run() {
             res.clearCookie('token', { maxAge: 0 }).send({ success: true })
         })
 
-        // //update data
-        // app.put('/jobs/:id', async (req, res) => {
-        //     const id = req.params.id;
-        //     const query = { _id: new ObjectId(id) };
-        //     const options = { upsert: true };
-        //     const updateJob = req.body;
-        //     const job = {
-        //         $set: {
-        //             user: updateJob.user,
-        //             title: updateJob.title,
-        //             type: updateJob.type,
-        //             salary: updateJob.salary,
-        //             applicant: updateJob.applicant,
-        //             description: updateJob.description,
-        //             url: updateJob.url,
-        //             date: updateJob.date,
-        //             deadline: updateJob.deadline,
-        //         }
-        //     }
-        //     const result = await jobsCollection.updateOne(query, job, options)
-        //     res.send(result)
-        // })
 
-        // // delete data
-        // app.delete('/jobs/:id', async (req, res) => {
-        //     const id = req.params.id;
-        //     const query = { _id: new ObjectId(id) }
-        //     const result = await jobsCollection.deleteOne(query);
-        //     res.send(result)
-        // })
 
 
         //All Jobs
@@ -120,6 +91,55 @@ async function run() {
             res.send(result)
         })
 
+        // get job as user
+        app.get('/allJobs/user', async (req, res) => {
+            let query = {};
+            if (req.query?.email) {
+                query = { email: req.query.email }
+            }
+            const result = await allJobsCollection.find(query).toArray();
+            res.send(result);
+        })
+
+        // get data
+        app.get('/allJobs/user/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await allJobsCollection.findOne(query);
+            res.send(result)
+        })
+
+        //update data
+        app.put('/allJobs/user/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const options = { upsert: true };
+            const updateJob = req.body;
+            const job = {
+                $set: {
+                    employer: updateJob.employer,
+                    title: updateJob.title,
+                    category: updateJob.category,
+                    salaryRange: updateJob.salaryRange,
+                    applicantsNumber: updateJob.applicantsNumber,
+                    description: updateJob.description,
+                    pictureUrl: updateJob.pictureUrl,
+                    postingDate: updateJob.postingDate,
+                    applicationDeadline: updateJob.applicationDeadline,
+                }
+            }
+            const result = await allJobsCollection.updateOne(query, job, options)
+            res.send(result)
+        })
+
+
+        // delete data
+        app.delete('/allJobs/user/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await allJobsCollection.deleteOne(query);
+            res.send(result)
+        })
 
         // Applied Jobs
         const appliedJobsCollection = client.db("jobsDB").collection("appliedJobs")
